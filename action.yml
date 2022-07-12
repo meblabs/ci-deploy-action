@@ -29,6 +29,7 @@ runs:
         token: ${{ inputs.token }}
 
     - name: Add profile credentials to ~/.aws/credentials
+      shell: bash
       env:
         AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY }}
@@ -41,11 +42,14 @@ runs:
         aws configure set region $AWS_DEFAULT_REGION
 
     - name: Setup
+      shell: bash
       run: bash setup.sh
 
     - name: Install jq
+      shell: bash
       run: sudo apt-get install jq
 
     - name: Call deploy script
+      shell: bash
       run: ${{ inputs.deploy-script }}
 

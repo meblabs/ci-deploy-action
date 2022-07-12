@@ -6,7 +6,7 @@ GitHub Action to setup and run the deployment script in MEBlabs standard CI
 name: deploy
 
 on:
-  pull_request:
+  push:
     branches:
       - release
       - staging

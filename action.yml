@@ -1,5 +1,5 @@
 name: ci-deploy-action
-description: "Setup and run the deploy on CI"
+description: "GitHub Action to setup and run the deployment script on AWS"
 
 inputs:
   AWS_ACCESS_KEY_ID:
@@ -9,35 +9,41 @@ inputs:
     description: "AWS Secret Access Key"
     required: true
   AWS_REGION:
-    description: "AWS Region"
+    description: "AWS default region"
     required: true
   token:
     description: "Personal access token to handle the repo"
-    required: true
-  deploy-script:
-    description: "The script to start the deployment"
     required: true
 
 runs:
   using: composite
   steps:
+    - name: Extract env
+      shell: bash
+      run: |
+        branch_name=${GITHUB_REF#refs/heads/}
+        if [ "$branch_name" = "release" ]; then
+            echo "##[set-output name=ENV;]$(echo production)"
+        else
+            echo "##[set-output name=ENV;]$(echo $branch_name)"
+        fi
+      id: extract_env
+
     - name: Checkout code
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0
-        ref: ${{ github.event.pull_request.head.ref }}
         token: ${{ inputs.token }}
 
-    - name: Add profile credentials to ~/.aws/credentials
+    - name: Add AWS and GIT credentials
       shell: bash
       env:
         AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: ${{ inputs.AWS_REGION }}
       run: |
         aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
         aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-        aws configure set region $AWS_DEFAULT_REGION
+        git config user.name 'MeblabsBot'
+        git config user.email 'github@meblabs.com'
 
     - name: Install jq
       shell: bash
@@ -45,5 +51,6 @@ runs:
 
     - name: Call deploy script
       shell: bash
-      run: ${{ inputs.deploy-script }}
-
+      run: |
+        cd deploy
+        bash deploy.sh -e ${{ steps.extract_env.outputs.ENV }}

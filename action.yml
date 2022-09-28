@@ -53,4 +53,4 @@ runs:
       shell: bash
       run: |
         cd deploy
-        bash deploy.sh -e ${{ steps.extract_env.outputs.ENV }}
+        bash deploy.sh -e ${{ steps.extract_env.outputs.ENV }} -a default

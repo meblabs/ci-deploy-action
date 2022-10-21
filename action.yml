@@ -23,9 +23,9 @@ runs:
       run: |
         branch_name=${GITHUB_REF#refs/heads/}
         if [ "$branch_name" = "release" ]; then
-            echo "##[set-output name=ENV;]$(echo production)"
+          echo "ENV=$(echo production)" >> $GITHUB_OUTPUT
         else
-            echo "##[set-output name=ENV;]$(echo $branch_name)"
+          echo "ENV=$(echo $branch_name)" >> $GITHUB_OUTPUT
         fi
       id: extract_env
 

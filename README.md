@@ -1,6 +1,27 @@
 # ci-deploy-action
 GitHub Action to setup and run the deployment script in MEBlabs standard CI
 
+## How To Use v2.1
+```yml
+name: deploy
+on:
+  push:
+    branches:
+      - release
+      - staging
+jobs:
+  deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: deploy
+        uses: meblabs/ci-deploy-action@v2.0
+        with:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          token: ${{ secrets.MEBBOT }}
+          npm: true | false (default false)
+```
+
 ## How To Use v2.0
 ```yml
 name: deploy

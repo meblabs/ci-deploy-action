@@ -14,6 +14,11 @@ inputs:
   token:
     description: "Personal access token to handle the repo"
     required: true
+  npm:
+    description: "Install packages"
+    required: false
+    type: boolean
+    default: false
 
 runs:
   using: composite
@@ -29,10 +34,21 @@ runs:
         fi
       id: extract_env
 
+    - if: ${{ inputs.npm == 'true' }}
+      name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16.x
+
     - name: Checkout code
       uses: actions/checkout@v3
       with:
         token: ${{ inputs.token }}
+
+    - if: ${{ inputs.npm == 'true' }}
+      name: Install dependencies
+      shell: bash
+      run: npm ci
 
     - name: Add AWS and GIT credentials
       shell: bash

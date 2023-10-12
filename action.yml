@@ -19,6 +19,11 @@ inputs:
     required: false
     type: boolean
     default: false
+  lfs:
+    description: "Pull data with Git LFS"
+    required: false
+    default: false
+    type: boolean
 
 runs:
   using: composite
@@ -44,6 +49,7 @@ runs:
       uses: actions/checkout@v3
       with:
         token: ${{ inputs.token }}
+        lfs: ${{ inputs.lfs }}
 
     - if: ${{ inputs.npm == 'true' }}
       name: Install dependencies

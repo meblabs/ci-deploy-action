@@ -50,6 +50,7 @@ runs:
 
     - if: ${{ inputs.lfs == 'true' }}
       name: Checkout LFS objects
+      shell: bash
       run: git lfs checkout && git lfs pull
 
     - if: ${{ inputs.npm == 'true' }}

@@ -2,12 +2,6 @@ name: ci-deploy-action
 description: "GitHub Action to setup and run the deployment script on AWS"
 
 inputs:
-  AWS_ACCESS_KEY_ID:
-    description: "AWS Access Key ID"
-    required: true
-  AWS_SECRET_ACCESS_KEY:
-    description: "AWS Secret Access Key"
-    required: true
   token:
     description: "Personal access token to handle the repo"
     required: true
@@ -21,6 +15,16 @@ inputs:
     required: false
     default: false
     type: boolean
+  role-to-assume:
+    description: "IAM role ARN to assume via OIDC"
+    required: true
+  aws-region:
+    description: "AWS region (default eu-west-1)"
+    required: false
+    default: "eu-west-1"
+  node-version:
+    description: "Pick the node version to use [20.x, 22.x]"
+    default: 22.x
 
 runs:
   using: composite
@@ -40,13 +44,15 @@ runs:
       name: Setup Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: 16.x
+        node-version: ${{ inputs.node-version }}
+        cache: npm 
 
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         token: ${{ inputs.token }}
         lfs: ${{ inputs.lfs }}
+        ref: ${{ github.event.pull_request.head.ref }}
 
     - if: ${{ inputs.lfs == 'true' }}
       name: Checkout LFS objects
@@ -58,14 +64,15 @@ runs:
       shell: bash
       run: npm ci
 
-    - name: Add AWS and GIT credentials
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.role-to-assume }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Configure git
       shell: bash
-      env:
-        AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY }}
       run: |
-        aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-        aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
         git config user.name 'MeblabsBot'
         git config user.email 'github@meblabs.com'
 
@@ -77,4 +84,4 @@ runs:
       shell: bash
       run: |
         cd deploy
-        bash deploy.sh -e ${{ steps.extract_env.outputs.ENV }} -a default
+        bash deploy.sh -e ${{ steps.extract_env.outputs.ENV }}

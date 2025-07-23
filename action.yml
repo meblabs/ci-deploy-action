@@ -52,7 +52,6 @@ runs:
       with:
         token: ${{ inputs.token }}
         lfs: ${{ inputs.lfs }}
-        fetch-depth: 0
         ref: ${{ github.event.pull_request.head.ref }}
 
     - if: ${{ inputs.lfs == 'true' }}
@@ -85,4 +84,4 @@ runs:
       shell: bash
       run: |
         cd deploy
-        bash deploy.sh -e ${{ steps.extract_env.outputs.ENV }} -a default
+        bash deploy.sh -e ${{ steps.extract_env.outputs.ENV }}

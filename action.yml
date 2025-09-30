@@ -8,13 +8,11 @@ inputs:
   npm:
     description: "Install packages"
     required: false
-    type: boolean
-    default: false
+    default: "false"
   lfs:
     description: "Pull data with Git LFS"
     required: false
-    default: false
-    type: boolean
+    default: "false"
   role-to-assume:
     description: "IAM role ARN to assume via OIDC"
     required: true
@@ -25,34 +23,37 @@ inputs:
   node-version:
     description: "Pick the node version to use [20.x, 22.x]"
     default: 22.x
+  deploy-args:
+    description: "Extra args forwarded to deploy.sh"
+    required: false
+    default: ""
 
 runs:
   using: composite
   steps:
     - name: Extract env
+      id: extract_env
       shell: bash
       run: |
         branch_name=${GITHUB_REF#refs/heads/}
         if [ "$branch_name" = "release" ]; then
-          echo "ENV=$(echo production)" >> $GITHUB_OUTPUT
+          echo "ENV=production" >> $GITHUB_OUTPUT
         else
-          echo "ENV=$(echo $branch_name)" >> $GITHUB_OUTPUT
+          echo "ENV=$branch_name" >> $GITHUB_OUTPUT
         fi
-      id: extract_env
 
     - if: ${{ inputs.npm == 'true' }}
       name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: ${{ inputs.node-version }}
-        cache: npm 
+        cache: npm
 
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         token: ${{ inputs.token }}
         lfs: ${{ inputs.lfs }}
-        ref: ${{ github.event.pull_request.head.ref }}
 
     - if: ${{ inputs.lfs == 'true' }}
       name: Checkout LFS objects
@@ -76,12 +77,17 @@ runs:
         git config user.name 'MeblabsBot'
         git config user.email 'github@meblabs.com'
 
-    - name: Install jq
+    - name: Ensure jq
       shell: bash
-      run: sudo apt-get install jq
+      run: |
+        if ! command -v jq >/dev/null 2>&1; then
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+        fi
 
     - name: Call deploy script
       shell: bash
       run: |
+        set -euo pipefail
         cd deploy
-        bash deploy.sh -e ${{ steps.extract_env.outputs.ENV }}
+        bash deploy.sh -e "${{ steps.extract_env.outputs.ENV }}" ${{ inputs.deploy-args }}

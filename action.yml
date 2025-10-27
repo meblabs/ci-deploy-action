@@ -90,4 +90,4 @@ runs:
       run: |
         set -euo pipefail
         cd deploy
-        bash -x deploy.sh -e "${{ steps.extract_env.outputs.ENV }}" ${{ inputs.deploy-args }}
+        bash deploy.sh -e "${{ steps.extract_env.outputs.ENV }}" ${{ inputs.deploy-args }}

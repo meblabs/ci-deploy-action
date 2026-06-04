@@ -50,10 +50,15 @@ runs:
         cache: npm
 
     - name: Checkout code
-      uses: actions/checkout@v6.0.2
+      # Credentials are intentionally persisted in the local git config: the LFS
+      # pull below and the deploy script run authenticated git operations with
+      # them. This action uploads no artifacts, so the artipacked leak vector
+      # (token ending up in an uploaded .git/config) does not apply here.
+      uses: actions/checkout@v6.0.2 # zizmor: ignore[artipacked]
       with:
         token: ${{ inputs.token }}
         lfs: ${{ inputs.lfs }}
+        persist-credentials: true
 
     - if: ${{ inputs.lfs == 'true' }}
       name: Checkout LFS objects

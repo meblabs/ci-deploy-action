@@ -1,7 +1,7 @@
 # ci-deploy-action
 
-[![zizmor](https://github.com/meblabs/ci-deploy-action/actions/workflows/zizmor.yml/badge.svg)](https://github.com/meblabs/ci-deploy-action/actions/workflows/zizmor.yml)
-![type](https://img.shields.io/badge/type-Composite%20Action-2ea44f)
+[![quality](https://github.com/meblabs/ci-deploy-action/actions/workflows/quality.yml/badge.svg)](https://github.com/meblabs/ci-deploy-action/actions/workflows/quality.yml)
+![type](https://img.shields.io/badge/github-Composite%20Action-blue?logo=github)
 [![](https://img.shields.io/static/v1?label=MEBlabs&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/meblabs)
 
 GitHub Action to setup and run the deployment script in MEBlabs standard CI
@@ -32,6 +32,8 @@ jobs:
 ### With semantic-release
 Run [meblabs/semantic-release-action](https://github.com/meblabs/semantic-release-action) first, then deploy. `deployment` waits for `release` (`needs: release`) but still runs even if release produced no new version (`if: always()`).
 
+Keep permissions minimal: a `permissions: {}` deny-all baseline at the top, and grant `id-token: write` only on `deployment` (it needs OIDC for `configure-aws-credentials`). The `release` job needs no token permissions — `semantic-release-action` authenticates with the `MEBBOT` PAT, not the `GITHUB_TOKEN`.
+
 ```yml
 name: Release
 
@@ -41,8 +43,7 @@ on:
       - release
       - staging
 
-permissions:
-  id-token: write
+permissions: {}
 
 jobs:
   release:

@@ -1,8 +1,13 @@
 # ci-deploy-action
+
+[![zizmor](https://github.com/meblabs/ci-deploy-action/actions/workflows/zizmor.yml/badge.svg)](https://github.com/meblabs/ci-deploy-action/actions/workflows/zizmor.yml)
+![type](https://img.shields.io/badge/type-Composite%20Action-2ea44f)
+[![](https://img.shields.io/static/v1?label=MEBlabs&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/meblabs)
+
 GitHub Action to setup and run the deployment script in MEBlabs standard CI
 
-## How to use v4
-v4 uses AWS OIDC (no access keys) and forwards extra CLI flags to your `deploy/deploy.sh`.
+## How to use v5
+v5 uses AWS OIDC (no access keys), sets up Docker Buildx for you, and forwards extra CLI flags to your `deploy/deploy.sh`.
 
 ### Minimal
 ```yml
@@ -12,29 +17,56 @@ on:
     branches: [release, staging]
 jobs:
   deployment:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
     permissions:
       id-token: write
     steps:
       - name: deploy
-        uses: meblabs/ci-deploy-action@v4
+        uses: meblabs/ci-deploy-action@v5
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           token: ${{ secrets.MEBBOT }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 ```
 
-### With options and extra args
+### With semantic-release
+Run [meblabs/semantic-release-action](https://github.com/meblabs/semantic-release-action) first, then deploy. `deployment` waits for `release` (`needs: release`) but still runs even if release produced no new version (`if: always()`).
+
 ```yml
-- name: deploy
-  uses: meblabs/ci-deploy-action@v4
-  with:
-    role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-    token: ${{ secrets.MEBBOT }}
-    aws-region: eu-west-1            # default
-    node-version: 22.x               # default
-    npm: "true"                      # install via npm ci and enable node cache
-    lfs: "false"                     # pull Git LFS objects when "true"
-    deploy-args: --version 1.2.3  # forwarded to deploy.sh
+name: Release
+
+on:
+  push:
+    branches:
+      - release
+      - staging
+
+permissions:
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Semantic Release
+        uses: meblabs/semantic-release-action@v3
+        with:
+          token: ${{ secrets.MEBBOT }}
+
+  deployment:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    needs: release
+    if: always()
+    permissions:
+      id-token: write
+    steps:
+      - name: deploy
+        uses: meblabs/ci-deploy-action@v5
+        with:
+          token: ${{ secrets.MEBBOT }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 ```
 
 ### Inputs
@@ -54,8 +86,14 @@ jobs:
 - Environment name is derived from branch: `release` -> `production`, otherwise the branch name.
 - Action checks out the repository at the current commit.
 - AWS credentials configured via `aws-actions/configure-aws-credentials` with OIDC.
+- Docker Buildx is set up via `docker/setup-buildx-action` (hash-pinned) before the deploy script.
 - `jq` is ensured. If missing it is installed, otherwise skipped.
 - Runs `deploy/deploy.sh -e "$ENV" <deploy-args>`.
+
+### Migration notes v4 → v5
+- Docker Buildx is now set up inside the action — remove the standalone `docker/setup-buildx-action` step from your workflow.
+- Bumped pinned actions to current majors (`checkout`/`setup-node` v6, `configure-aws-credentials` v6), which run on the Node 24 runtime.
+- No input or OIDC changes: existing `@v4` callers can switch to `@v5` as-is.
 
 ### Migration notes v3 → v4
 - New input: `deploy-args` to forward arbitrary flags (e.g., `--version 1.2.3`).
@@ -84,64 +122,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           token: ${{ secrets.MEBBOT }}
           npm: true | false (default false)
-```
-
-## How To Use v2.0 (legacy)
-```yml
-name: deploy
-on:
-  push:
-    branches:
-      - release
-      - staging
-jobs:
-  deployment:
-    runs-on: ubuntu-latest
-    steps:
-      - name: deploy
-        uses: meblabs/ci-deploy-action@v2.0
-        with:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          token: ${{ secrets.MEBBOT }}
-```
-
-## How To Use v1.0 [Script customization] (legacy)
-```yml
-name: deploy
-
-on:
-  push:
-    branches:
-      - release
-      - staging
-
-jobs:
-  deployment:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Extract env
-        run: |
-          branch_name=${GITHUB_REF#refs/heads/}
-          if [ "$branch_name" = "release" ]; then
-              echo "##[set-output name=ENV;]$(echo production)"
-          else
-              echo "##[set-output name=ENV;]$(echo $branch-name)"
-          fi
-        id: extract_env
-
-      - name: deploy
-        uses: meblabs/ci-deploy-action@v1.0
-        with:
-            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            AWS_REGION: eu-west-1
-            token: ${{ secrets.MEBBOT }}
-            deploy-script: bash deploy.sh -e ${{ steps.extract_env.outputs.ENV }}
-```
-
-## Git tag update
-```sh
-git tag -af "v2.0" -m "version 2.0"
-git push -f --tags
 ```

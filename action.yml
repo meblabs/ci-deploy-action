@@ -54,7 +54,7 @@ runs:
       # pull below and the deploy script run authenticated git operations with
       # them. This action uploads no artifacts, so the artipacked leak vector
       # (token ending up in an uploaded .git/config) does not apply here.
-      uses: actions/checkout@v6.0.3 # zizmor: ignore[artipacked]
+      uses: actions/checkout@v7.0.0 # zizmor: ignore[artipacked]
       with:
         token: ${{ inputs.token }}
         lfs: ${{ inputs.lfs }}
